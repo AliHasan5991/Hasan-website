@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Volume2, VolumeX, Play, Pause, Music } from "lucide-react";
 
 export default function AudioPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.5); // 50% so it's clearly audible
+  const [volume, setVolume] = useState(0.5);
   const [isHovered, setIsHovered] = useState(false);
+  const [needsGesture, setNeedsGesture] = useState(true); // show prompt until first click
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Play as soon as enough audio data is loaded
+  // Try autoplay immediately; if blocked, keep the "enable sound" prompt visible
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
