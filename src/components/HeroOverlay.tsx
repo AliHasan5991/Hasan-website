@@ -51,7 +51,7 @@ export default function HeroOverlay({ progress }: HeroOverlayProps) {
           className="text-3xl sm:text-5xl tracking-tight text-white mb-6"
         />
         <p className="text-white/60 text-lg sm:text-xl font-light">
-          Executed India's largest contactless patient monitoring deployment, aligning complex government and enterprise stakeholders.
+          Executed India&apos;s largest contactless patient monitoring deployment, aligning complex government and enterprise stakeholders.
         </p>
       </motion.div>
 

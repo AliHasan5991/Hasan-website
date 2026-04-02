@@ -34,7 +34,7 @@ export const TextGenerateEffect = ({
   }, [progress, controls, startPoint]);
 
   return (
-    <div className={cn("font-bold", className)} role="heading" aria-label={words}>
+    <div className={cn("font-bold", className)} aria-label={words}>
       {/* Screen-reader-only full-text fallback */}
       <span className="sr-only">{words}</span>
 

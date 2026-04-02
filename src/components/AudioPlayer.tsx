@@ -32,6 +32,7 @@ export default function AudioPlayer() {
     return () => {
       audio.removeEventListener("canplaythrough", onCanPlay);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
