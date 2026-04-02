@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"] });
 import AudioPlayer from "@/components/AudioPlayer";
 import { FloatingDock } from "@/components/ui/floating-dock";
+
+const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: "Creative Portfolio | ScrollyCanvas",
