@@ -29,7 +29,10 @@ export const FloatingDock = () => {
   ];
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex h-14 items-center justify-center gap-4 rounded-2xl bg-black/50 backdrop-blur-md border border-white/10 px-4 shadow-2xl hover:bg-black/80 transition-colors">
+    <div
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex h-14 items-center justify-center gap-3 sm:gap-4 rounded-2xl bg-black/60 backdrop-blur-md border border-white/10 px-4 shadow-2xl transition-colors"
+      style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
       {links.map((link) => (
         <DockIcon key={link.title} title={link.title} href={link.href}>
           {link.icon}

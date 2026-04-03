@@ -20,6 +20,12 @@ body {
   color: var(--foreground);
   background: var(--background);
   overflow-x: hidden;
+  /* iOS momentum scrolling */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent iOS text size adjust on orientation change */
+  -webkit-text-size-adjust: 100%;
+  /* Remove iOS tap highlight */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Custom Selection */
@@ -64,4 +70,21 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* iOS safe area padding for notch / home indicator */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* GPU compositing hint for canvas animation */
+canvas {
+  will-change: contents;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Prevent double-tap zoom on buttons and interactive elements */
+button, a, input[type="range"] {
+  touch-action: manipulation;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { MotionValue, useMotionValueEvent } from "framer-motion";
 
 interface ScrollyCanvasProps {
@@ -9,96 +9,93 @@ interface ScrollyCanvasProps {
 }
 
 export default function ScrollyCanvas({ progress, frameCount }: ScrollyCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [images, setImages] = useState<HTMLImageElement[]>([]);
-  const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const imagesRef   = useRef<HTMLImageElement[]>([]);
+  const frameRef    = useRef<number>(0);
+  const loadedRef   = useRef<number>(0);
+  const rafRef      = useRef<number | null>(null);
 
-  // Preload images
-  useEffect(() => {
-    const loadedImages: HTMLImageElement[] = [];
-    let loadedCount = 0;
-
-    for (let i = 0; i < frameCount; i++) {
-      const img = new Image();
-      // Pad to 3 digits e.g., 000, 001, ..., 119
-      const idxStr = i.toString().padStart(3, "0");
-      img.src = `/sequence/frame_${idxStr}_delay-0.066s.png`;
-      img.onload = () => {
-        loadedCount++;
-        if (loadedCount === frameCount) {
-           setImages(loadedImages);
-        }
-      };
-      loadedImages.push(img);
-    }
-  }, [frameCount]);
-
-  // Handle Resize & Drawing
-  const drawImage = (img: HTMLImageElement | undefined) => {
-    if (!img) return;
+  // Draw a single image onto canvas with "cover" sizing
+  const draw = useCallback((img: HTMLImageElement) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !img.complete || img.naturalWidth === 0) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // "Cover" sizing logic
-    const canvasRatio = canvas.width / canvas.height;
-    const imgRatio = img.width / img.height;
-
-    let renderWidth = canvas.width;
-    let renderHeight = canvas.height;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (canvasRatio > imgRatio) {
-      renderHeight = canvas.width / imgRatio;
-      offsetY = (canvas.height - renderHeight) / 2;
-    } else {
-      renderWidth = canvas.height * imgRatio;
-      offsetX = (canvas.width - renderWidth) / 2;
-    }
+    const cR = canvas.width / canvas.height;
+    const iR = img.naturalWidth / img.naturalHeight;
+    let w = canvas.width, h = canvas.height, x = 0, y = 0;
+    if (cR > iR) { h = w / iR; y = (canvas.height - h) / 2; }
+    else         { w = h * iR; x = (canvas.width  - w) / 2; }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Optional: add a subtle dark overlay to the canvas to make text readable
-    ctx.drawImage(img, offsetX, offsetY, renderWidth, renderHeight);
-    
-    // Draw semi-transparent overlay
-    ctx.fillStyle = "rgba(10, 10, 10, 0.4)";
+    ctx.drawImage(img, x, y, w, h);
+    ctx.fillStyle = "rgba(10,10,10,0.4)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  };
+  }, []);
 
+  // Size canvas to viewport
+  const resize = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    // Use visualViewport on iOS to avoid the URL-bar height bug
+    const vv = window.visualViewport;
+    canvas.width  = vv ? vv.width  : window.innerWidth;
+    canvas.height = vv ? vv.height : window.innerHeight;
+    const cur = imagesRef.current[frameRef.current];
+    if (cur?.complete) draw(cur);
+  }, [draw]);
+
+  // Preload — draw frame 0 as soon as it's ready, load the rest in parallel
   useEffect(() => {
-    const handleResize = () => {
-      if (canvasRef.current) {
-        canvasRef.current.width = window.innerWidth;
-        canvasRef.current.height = window.innerHeight;
-        drawImage(images[currentFrameIndex]);
+    const imgs: HTMLImageElement[] = new Array(frameCount);
+    imagesRef.current = imgs;
+
+    const tryDraw = (i: number) => {
+      if (i === 0) {
+        resize();          // set canvas size first
+        draw(imgs[0]);     // paint immediately
       }
+      loadedRef.current++;
     };
-    window.addEventListener("resize", handleResize);
-    handleResize(); // Initial sizing
 
-    return () => window.removeEventListener("resize", handleResize);
-  }, [images, currentFrameIndex]);
+    for (let i = 0; i < frameCount; i++) {
+      const img = new Image();
+      const idx = i.toString().padStart(3, "0");
+      img.src = `/sequence/frame_${idx}_delay-0.066s.png`;
+      imgs[i] = img;
+      if (img.complete) {
+        tryDraw(i);
+      } else {
+        img.onload = () => tryDraw(i);
+      }
+    }
 
-  // Subscribe to Framer Motion progress
+    resize();
+    window.addEventListener("resize", resize, { passive: true });
+    window.visualViewport?.addEventListener("resize", resize, { passive: true });
+    return () => {
+      window.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("resize", resize);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [frameCount, draw, resize]);
+
+  // Map scroll progress → frame
   useMotionValueEvent(progress, "change", (latest) => {
-    if (images.length === 0) return;
-    
-    // Map progress (0 to 1) to frame index
-    const index = Math.min(
-      frameCount - 1,
-      Math.floor(latest * frameCount)
-    );
-    
-    setCurrentFrameIndex(index);
-    requestAnimationFrame(() => drawImage(images[index]));
+    const idx = Math.min(frameCount - 1, Math.floor(latest * frameCount));
+    frameRef.current = idx;
+    const img = imagesRef.current[idx];
+    if (!img?.complete) return;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => draw(img));
   });
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute top-0 left-0 w-full h-full object-cover"
+      className="absolute top-0 left-0 w-full h-full"
+      style={{ display: "block" }}
     />
   );
 }
